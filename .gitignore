@@ -162,3 +162,4 @@ cython_debug/
 #.idea/
 import vk-api
 .idea
+private_api.py
