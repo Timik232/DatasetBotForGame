@@ -1,7 +1,7 @@
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.utils import get_random_id
 
-from main import vk
+from vk import vk
 
 
 def create_keyboard(id: int, text: str, response="menu"):
@@ -13,7 +13,7 @@ def create_keyboard(id: int, text: str, response="menu"):
         if response == "menu":
             keyboard.add_button("Системный промпт", color=VkKeyboardColor.PRIMARY)
             keyboard.add_button(
-                "Вывести JSON-структуру последнего сообщения",
+                "Вывести JSON-структуру",
                 color=VkKeyboardColor.SECONDARY,
             )
             keyboard.add_line()
