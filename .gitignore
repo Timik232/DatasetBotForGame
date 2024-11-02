@@ -163,3 +163,4 @@ cython_debug/
 import vk-api
 .idea
 private_api.py
+secret.key

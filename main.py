@@ -1,27 +1,15 @@
+import os
+import pickle
 import time
 from typing import List
 
 import requests
-import vk_api
-from vk_api.longpoll import VkEventType, VkLongPoll
-from vk_api.utils import get_random_id
+from vk_api.longpoll import VkEventType
 
 from CommandClass import initiate_bot
-from private_api import PRIVATE_API
-
-
-def send_message(user_id: int, msg: str, stiker=None, attach=None) -> None:
-    try:
-        vk.messages.send(
-            user_id=user_id,
-            random_id=get_random_id(),
-            message=msg,
-            sticker_id=stiker,
-            attachment=attach,
-        )
-    except BaseException as ex:
-        print(ex)
-        return
+from keyboards import create_keyboard
+from password import decrypt_password, load_key
+from vk import longpoll, send_message
 
 
 def main(users: List[dict]):
@@ -31,27 +19,36 @@ def main(users: List[dict]):
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             user_id = event.user_id
             if user_id not in ids:
-                bot = initiate_bot(user_id)
-                users.append({"user_id": user_id, "bot": bot})
-                ids.append(user_id)
-            msg = event.text.lower()
-            for user in users:
-                if user["user_id"] == user_id:
-                    bot = user["bot"]
-                    if bot is not None:
-                        bot.process_message(msg)
-                        for response in bot.responses:
-                            send_message(user_id, response)
-                        bot.responses = []
-                    else:
-                        send_message(user_id, "Сначала введите /start")
+                key = load_key()
+                if event.text != decrypt_password(
+                    open("bot_data/encrypted_password.txt", "rb").read(), key
+                ):
+                    send_message(user_id, "Неверный пароль")
+                else:
+                    bot = initiate_bot(user_id)
+                    users.append({"user_id": user_id, "bot": bot})
+                    ids.append(user_id)
+                    with open(os.path.join("bot_data", "users.pkl"), "wb") as file:
+                        pickle.dump(users, file)
+                    create_keyboard(
+                        user_id,
+                        "Вы успешно зарегистрированы. Можете использовать бота.",
+                    )
+            else:
+                msg = event.text.lower()
+                for user in users:
+                    if user["user_id"] == user_id:
+                        bot = user["bot"]
+                        if bot is not None:
+                            bot.execute_command(msg)
 
 
 if __name__ == "__main__":
-    users = []
-    vk_session = vk_api.VkApi(token=PRIVATE_API)
-    vk = vk_session.get_api()
-    longpoll = VkLongPoll(vk_session)
+    if os.path.exists(os.path.join("bot_data", "users.pkl")):
+        with open(os.path.join("bot_data", "users.pkl"), "rb") as file:
+            users = pickle.load(file)
+    else:
+        users = []
     while True:
         try:
             main(users)

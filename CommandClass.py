@@ -16,30 +16,46 @@ class Command(ABC):
     def get_description(self) -> str:
         return self.description
 
+    def __str__(self):
+        return self.description
+
 
 class Bot:
     def __init__(self):
         self.commands = {}
 
-    def set_command(self, name, command):
+    def set_command(self, name: str, command):
         self.commands[name] = command
 
-    def execute_command(self, name, *args, **kwargs):
+    def execute_command(self, name: str, *args, **kwargs):
         if name in self.commands:
             self.commands[name].execute(*args, **kwargs)
         else:
             print(f"Команда {name} не найдена.")
 
     def help(self):
-        print("Список команд:")
-        for command in self.commands:
-            print(command + "\n")
+        message = "Список команд:\n"
+        for name, command in self.commands.items():
+            message += name + " -- " + str(command) + "\n"
+        print(message)
 
 
 class UserBot(Bot):
     def __init__(self, user_id):
         super().__init__()
         self.user_id = user_id
+
+    def execute_command(self, name: str, *args, **kwargs):
+        if name in self.commands:
+            self.commands[name].execute(*args, **kwargs)
+        else:
+            create_keyboard(self.user_id, f"Команда '{name}' не найдена.")
+
+    def help(self):
+        message = "Список команд:\n"
+        for name, command in self.commands.items():
+            message += name + " -- " + str(command) + "\n"
+        create_keyboard(self.user_id, message)
 
 
 class HelpCommand(Command):
@@ -109,9 +125,4 @@ def initiate_bot(user_id: int = None) -> Bot:
     ]
     for command in commands:
         bot.set_command(command["name"], command["usage"])
-    bot.set_command(
-        "помощь",
-    )
-    bot.set_command("системный промпт", ProcessDataCommand(manager))
-
     return bot
