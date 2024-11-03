@@ -2,6 +2,7 @@ import inspect
 import json
 import os
 from abc import ABC, abstractmethod
+from typing import List
 
 from keyboards import create_keyboard
 from vk import send_document
@@ -50,7 +51,7 @@ class UserBot(Bot):
     Class for all user interactions. Include user state and user id
     """
 
-    def __init__(self, user_id: int, states: list = None):
+    def __init__(self, user_id: int, states: List[str] = None):
         super().__init__()
         self.user_id = user_id
         self.states = states
@@ -92,10 +93,11 @@ class UserBot(Bot):
 
     def help(self):
         """
-        Print all comannds to user
+        Print all commands to user
         """
         message = "Список команд:\n"
         help_commands = self.commands.items()
+        help_commands = filter(lambda x: x[0][0] != "_", help_commands)
         help_commands = sorted(help_commands, key=lambda x: x[0])
         for name, command in help_commands:
             message += "• " + name + " -- " + str(command) + "\n"
@@ -146,14 +148,14 @@ class HelpCommand(Command):
         self.bot.help()
 
 
-class CreateDatasetCommand(Command):
-    def execute(self):
-        self.receiver.create_dataset()
+class InitCreateDatasetCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.init_create_dataset(user_id)
 
 
-class ProcessDataCommand(Command):
-    def execute(self):
-        self.receiver.process_data()
+class SystemCreateDatasetCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.system_create_dataset(user_id)
 
 
 class SystemPromptCommand(Command):
@@ -191,6 +193,31 @@ class InputSystemPromptCommand(Command):
         self.receiver.input_system_prompt(user_id, msg)
 
 
+class InputSystemDatasetCommand(Command):
+    def execute(self, user_id: int, msg: str):
+        self.receiver.input_system_dataset(user_id, msg)
+
+
+class ShowDialogsCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.show_dialogs(user_id)
+
+
+class ShowDialogsNameCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.show_dialogs_names(user_id)
+
+
+class DialogByTopicCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.input_dialog_name_to_show(user_id)
+
+
+class ShowDialogByTopicCommand(Command):
+    def execute(self, user_id: int, topic: str):
+        self.receiver.show_dialog_by_name(user_id, topic)
+
+
 class DatasetManager:
     def __init__(self, bot: UserBot):
         with open(
@@ -199,8 +226,10 @@ class DatasetManager:
             self.data = json.load(file)
             self.bot = bot
 
-    def create_dataset(self):
-        print("Создание датасета...")
+    def init_create_dataset(self, user_id: int):
+        self.bot.invert_block()
+        self.bot.set_state("диалог системный промпт")
+        create_keyboard(user_id, "Системный промпт оставить неизменным?", "данет")
 
     def system_prompt(self, user_id: int):
         create_keyboard(
@@ -224,7 +253,7 @@ class DatasetManager:
             "отмена",
         )
         self.bot.invert_block()
-        self.bot.set_state("ввод системного промпта")
+        self.bot.set_state("_ввод системного промпта")
 
     def input_system_prompt(self, user_id: int, message: str):
         self.data["system"] = message
@@ -241,9 +270,35 @@ class DatasetManager:
             self.bot.get_state(),
         )
 
+    def input_system_dataset(self, user_id: int, message: str):
+        self.bot.invert_block()
+
     def json_structure(self, user_id: int):
         send_document(user_id, os.path.join("datasets", "dataset_ru.json"))
         create_keyboard(user_id, "JSON-структура отправлена.")
+
+    def show_dialogs(self, user_id: int):
+        create_keyboard(user_id, "Выберите вариант.", "посмотреть диалоги")
+
+    def show_dialogs_names(self, user_id: int):
+        topics = ""
+        for i, topic in enumerate(self.data["examples"]):
+            topics += str(i) + ") " + topic + "\n"
+        create_keyboard(user_id, topics, "посмотреть диалоги")
+
+    def input_dialog_name_to_show(self, user_id: int):
+        self.bot.set_state("_вывести диалог по названию")
+        self.bot.invert_block()
+        create_keyboard(user_id, "Введите название диалога.", "отмена")
+
+    def show_dialog_by_name(self, user_id: int, topic: str):
+        self.bot.state_pop()
+        try:
+            dialog = str(self.data["examples"][topic])
+        except Exception:
+            create_keyboard(user_id, "Диалог не найден.", "посмотреть диалоги")
+            return
+        create_keyboard(user_id, dialog, "посмотреть диалоги")
 
 
 def initiate_bot(user_id: int = None) -> Bot:
@@ -252,7 +307,7 @@ def initiate_bot(user_id: int = None) -> Bot:
     :param user_id: vk id
     :return: bot instance
     """
-    states = ["меню", "системный промпт"]
+    states = ["меню", "системный промпт", "посмотреть диалоги"]
     if user_id is not None:
         bot = UserBot(user_id, states)
     else:
@@ -265,7 +320,7 @@ def initiate_bot(user_id: int = None) -> Bot:
         },
         {
             "name": "добавить диалог",
-            "usage": CreateDatasetCommand(
+            "usage": InitCreateDatasetCommand(
                 manager, "Записать диалог между ботом и пользователем в датасет."
             ),
         },
@@ -292,7 +347,7 @@ def initiate_bot(user_id: int = None) -> Bot:
             "usage": ChangeSystemPromptCommand(manager, "Изменить системный промпт"),
         },
         {
-            "name": "ввод системного промпта",
+            "name": "_ввод системного промпта",
             "usage": InputSystemPromptCommand(
                 manager, "Ввод нового системного промпта без подтверждения"
             ),
@@ -304,6 +359,28 @@ def initiate_bot(user_id: int = None) -> Bot:
         {
             "name": "отмена",
             "usage": BackCommand(bot, "Отмена действия"),
+        },
+        {
+            "name": "_диалог системный промпт",
+            "usage": InputSystemDatasetCommand(
+                manager, "Ввод нового диалога без подтверждения"
+            ),
+        },
+        {
+            "name": "посмотреть диалоги",
+            "usage": ShowDialogsCommand(manager, "Посмотреть диалоги"),
+        },
+        {
+            "name": "вывести список диалогов",
+            "usage": ShowDialogsNameCommand(manager, "Вывести список диалогов"),
+        },
+        {
+            "name": "вывести диалог по названию",
+            "usage": DialogByTopicCommand(manager, "Вывести диалог по названию"),
+        },
+        {
+            "name": "_вывести диалог по названию",
+            "usage": ShowDialogByTopicCommand(manager, "Вывести диалог по названию"),
         },
     ]
     for command in commands:

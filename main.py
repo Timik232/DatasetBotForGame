@@ -39,7 +39,11 @@ def main(users: List[dict], ids: List[int]):
                     if user["user_id"] == user_id:
                         bot = user["bot"]
                         if bot is not None:
-                            bot.execute_command(msg, user_id)
+                            try:
+                                bot.execute_command(msg, user_id)
+                            except Exception as ex:
+                                print(ex)
+                                send_message(user_id, "Произошла ошибка")
 
 
 if __name__ == "__main__":
