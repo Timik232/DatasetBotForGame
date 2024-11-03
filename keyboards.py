@@ -38,6 +38,20 @@ def create_keyboard(id: int, text: str, response="меню"):
         elif response == "отмена":
             keyboard = VkKeyboard(inline=True)
             keyboard.add_button("Отмена", color=VkKeyboardColor.NEGATIVE)
+        elif response == "данет":
+            keyboard = VkKeyboard(inline=True)
+            keyboard.add_button("Да", color=VkKeyboardColor.POSITIVE)
+            keyboard.add_button("Нет", color=VkKeyboardColor.NEGATIVE)
+        elif response == "посмотреть диалоги":
+            keyboard.add_button(
+                "Вывести список диалогов", color=VkKeyboardColor.PRIMARY
+            )
+            keyboard.add_line()
+            keyboard.add_button(
+                "Вывести диалог по названию", color=VkKeyboardColor.PRIMARY
+            )
+            keyboard.add_line()
+            keyboard.add_button("Назад", color=VkKeyboardColor.NEGATIVE)
         vk.messages.send(
             user_id=id,
             random_id=get_random_id(),
