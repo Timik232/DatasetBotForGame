@@ -26,7 +26,6 @@ def check_and_backup(
     :param backup_amounts: amount of backups to keep
     :return:
     """
-    print("Backup thread started")
     file_name = os.path.basename(file_path).split(".")[0]
     last_modified = os.path.getmtime(file_path)
     if not os.path.exists(backup_dir):
@@ -107,6 +106,7 @@ if __name__ == "__main__":
     )
     backup_thread.daemon = True
     backup_thread.start()
+    print("Backup thread started")
     while True:
         try:
             main(users, ids)
