@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "botforgamedatasets"
+version = "0.1.0"
+description = "Bot for creating and managing dialogs dataset for the computer game's LLM"
+authors = ["Timik232 <komolov.timurka@mail.ru>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.10.15"
+requests = "^2.32.3"
+vk-api = "^11.9.9"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.10.0"
+pre-commit = "^4.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
