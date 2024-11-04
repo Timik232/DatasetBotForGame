@@ -271,6 +271,21 @@ class CancelDatasetCommand(Command):
         self.receiver.cancel_dataset()
 
 
+class InitDeleteDatasetCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.init_delete_dataset(user_id)
+
+
+class ConfirmDeleteDatasetCommand(Command):
+    def execute(self, user_id: int, msg: str):
+        self.receiver.delete_dataset(user_id, msg)
+
+
+class DeleteDatasetCommand(Command):
+    def execute(self, user_id: int, msg: str):
+        self.receiver.confirm_delete_dataset(user_id, msg)
+
+
 class DatasetManager:
     def __init__(self, bot: UserBot):
         with open(
@@ -412,8 +427,8 @@ class DatasetManager:
     def set_dialog_name(self, user_id: int, message: str):
         """
         _диалог название
-        :param user_id:
-        :param message:
+        :param user_id: vk id
+        :param message: topic name
         :return:
         """
         message = message.lower().replace(" ", "_")
@@ -632,6 +647,76 @@ class DatasetManager:
             open(os.path.join("datasets", "dataset_ru.json"), "r", encoding="UTF-8")
         )
 
+    def init_delete_dataset(self, user_id: int):
+        """
+        Удалить диалог
+        :param user_id: vk id
+        :return:
+        """
+        self.bot.invert_block()
+        self.bot.set_state("_удалить диалог")
+        create_keyboard(
+            user_id,
+            "ВНИМАНИЕ! Обычно удалять диалог не требуется. "
+            "Использовать только если вы знаете,"
+            "что вы делаете. Если вы передумали, нажмите или введите ОТМЕНА.\n"
+            "Напишите название диалога для удаления.",
+            "отмена",
+        )
+
+    def delete_dataset(self, user_id: int, message: str):
+        """
+        _удалить диалог
+        :param user_id: vk id
+        :param message: topic name
+        :return:
+        """
+        message = message.lower().replace(" ", "_")
+        if message not in self.data["examples"]:
+            self.bot.state_cancel_pop()
+            create_keyboard(
+                user_id, "Темы с таким названием не существует.", self.bot.get_state()
+            )
+        else:
+            self.bot.invert_block()
+            self.bot.set_state("_удалить подтверждение")
+            self.bufName = message
+            create_keyboard(
+                user_id,
+                f"Вы уверены, что хотите удалить диалог '{self.bufName}'? "
+                f"Это действие необратимо.",
+                "данет",
+            )
+
+    def confirm_delete_dataset(self, user_id: int, message: str):
+        """
+        _удалить подтверждение
+        :param user_id: vk id
+        :param message: yes or no
+        :return:
+        """
+        if message.lower() == "да":
+            try:
+                del self.data["examples"][self.bufName]
+            except Exception as ex:
+                print(ex)
+                self.bot.state_cancel_pop()
+                create_keyboard(
+                    user_id, "Возникла ошибка при удалении", self.bot.get_state()
+                )
+                return
+            self.bot.state_cancel_pop()
+            create_keyboard(
+                user_id,
+                f"Тема {self.bufName} была " f"удалена безвозвратно.",
+                self.bot.get_state(),
+            )
+            self.bufName = ""
+        else:
+            self.bot.state_cancel_pop()
+            self.bufName = ""
+            create_keyboard(user_id, "Отмена удаления темы.", self.bot.get_state())
+
 
 def initiate_bot(user_id: int = None) -> Bot:
     """
@@ -755,6 +840,18 @@ def initiate_bot(user_id: int = None) -> Bot:
         {
             "name": "_отмена менеджер",
             "usage": CancelDatasetCommand(manager, "Отмена создания диалога"),
+        },
+        {
+            "name": "удалить диалог",
+            "usage": InitDeleteDatasetCommand(manager, "Удалить диалог"),
+        },
+        {
+            "name": "_удалить диалог",
+            "usage": ConfirmDeleteDatasetCommand(manager, "Удалить диалог"),
+        },
+        {
+            "name": "_удалить подтверждение",
+            "usage": DeleteDatasetCommand(manager, "Подтверждение удаления диалога"),
         },
     ]
     for command in commands:
