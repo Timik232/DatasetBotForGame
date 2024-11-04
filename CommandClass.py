@@ -390,6 +390,7 @@ class DatasetManager:
         :param topic:
         :return:
         """
+        topic = topic.lower().replace(" ", "_")
         self.bot.state_pop()
         try:
             dialog = str(self.data["examples"][topic])
