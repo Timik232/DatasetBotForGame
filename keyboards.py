@@ -52,6 +52,24 @@ def create_keyboard(id: int, text: str, response="меню"):
             )
             keyboard.add_line()
             keyboard.add_button("Назад", color=VkKeyboardColor.NEGATIVE)
+        elif response == "изменить диалог":
+            keyboard.add_button(
+                "Изменить название диалога", color=VkKeyboardColor.PRIMARY
+            )
+            keyboard.add_line()
+            keyboard.add_button(
+                "Изменить системный промпт", color=VkKeyboardColor.PRIMARY
+            )
+            keyboard.add_line()
+            keyboard.add_button(
+                "Изменить доступные действия", color=VkKeyboardColor.PRIMARY
+            )
+            keyboard.add_line()
+            keyboard.add_button("Изменить действие", color=VkKeyboardColor.PRIMARY)
+            keyboard.add_line()
+            keyboard.add_button("Изменить текст", color=VkKeyboardColor.PRIMARY)
+            keyboard.add_line()
+            keyboard.add_button("Назад", color=VkKeyboardColor.NEGATIVE)
         vk.messages.send(
             user_id=id,
             random_id=get_random_id(),

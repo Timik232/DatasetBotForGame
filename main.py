@@ -77,7 +77,7 @@ def main(users: List[dict], ids: List[int]):
                         "Вы успешно зарегистрированы. Можете использовать бота.",
                     )
             else:
-                msg = event.text
+                msg = event.text.replace("&quot;", "'")
                 for user in users:
                     if user["user_id"] == user_id:
                         bot = user["bot"]
