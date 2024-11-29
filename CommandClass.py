@@ -286,6 +286,26 @@ class DeleteDatasetCommand(Command):
         self.receiver.confirm_delete_dataset(user_id, msg)
 
 
+class ShowChangeCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.show_change(user_id)
+
+
+class SetDialogForChangeCommand(Command):
+    def execute(self, user_id: int, msg: str):
+        self.receiver.set_dialog_for_change(user_id, msg)
+
+
+class ShowChangedDialogCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.show_changed_dialog(user_id)
+
+
+class ChangeDialogNameCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.input_new_dialog_name(user_id)
+
+
 class DatasetManager:
     def __init__(self, bot: UserBot):
         with open(
@@ -396,7 +416,7 @@ class DatasetManager:
         """
         self.bot.set_state("_вывести диалог по названию")
         self.bot.invert_block()
-        create_keyboard(user_id, "Введите название диалога.", "отмена")
+        create_keyboard(user_id, "Введите название либо номер диалога.", "отмена")
 
     def show_dialog_by_name(self, user_id: int, topic: str):
         """
@@ -407,6 +427,14 @@ class DatasetManager:
         """
         topic = topic.lower().replace(" ", "_")
         self.bot.state_pop()
+        try:
+            number = int(topic)
+            topic = list(self.data["examples"].keys())[number]
+        except ValueError:
+            pass
+        except IndexError:
+            create_keyboard(user_id, "Диалог не найден.", "посмотреть диалоги")
+            return
         try:
             dialog = str(self.data["examples"][topic])
         except Exception:
@@ -445,14 +473,17 @@ class DatasetManager:
                 "Название должно быть от 3 до 40 символов.",
             )
             return
-        self.data["examples"][message] = {}
-        self.bot.set_state("_диалог системный промпт")
-        self.bufName = message
-        create_keyboard(
-            user_id,
-            "Нужен новый системный промпт? Если не знаете, выбирайте НЕТ.",
-            "данет",
-        )
+        if self.bot.previous_state == "_изменить диалог":
+            pass
+        else:
+            self.data["examples"][message] = {}
+            self.bot.set_state("_диалог системный промпт")
+            self.bufName = message
+            create_keyboard(
+                user_id,
+                "Нужен новый системный промпт? Если не знаете, выбирайте НЕТ.",
+                "данет",
+            )
 
     def input_system_confirmation_dataset(self, user_id: int, message: str):
         """
@@ -717,6 +748,66 @@ class DatasetManager:
             self.bufName = ""
             create_keyboard(user_id, "Отмена удаления темы.", self.bot.get_state())
 
+    def show_change(self, user_id: int):
+        """
+        изменить диалог
+        :param user_id: vk id
+        :return:
+        """
+        self.bot.set_state("_ввести название для изменения")
+        self.bot.invert_block()
+        create_keyboard(
+            user_id, "Введите название темы или порядковый номер.", "отмена"
+        )
+
+    def set_dialog_for_change(self, user_id: int, msg: str):
+        """
+        _ввести название для изменения
+        :param user_id: vk id
+        :param msg: topic name or number
+        :return:
+        """
+        dialog_name = msg.lower().replace(" ", "_")
+        try:
+            number = int(dialog_name)
+            dialog_name = list(self.data["examples"].keys())[number]
+        except ValueError:
+            pass
+        except IndexError:
+            create_keyboard(user_id, "Диалог не найден.")
+            return
+        try:
+            _ = str(self.data["examples"][dialog_name])
+        except Exception:
+            create_keyboard(user_id, "Диалог не найден.")
+            return
+        self.bufName = dialog_name
+        self.bot.invert_block()
+        self.bot.set_state("_изменить диалог")
+        create_keyboard(
+            user_id,
+            f"Выбран диалог '{dialog_name}'. Что вы хотите изменить?",
+            "изменить диалог",
+        )
+
+    def show_changed_dialog(self, user_id: int):
+        """
+        вывести полностью
+        :param user_id:
+        :return:
+        """
+        create_keyboard(user_id, self.data["examples"][self.bufName], "изменить диалог")
+
+    def input_new_dialog_name(self, user_id: int):
+        """
+        _диалог название
+        :param user_id: vk id
+        :return:
+        """
+        self.bot.invert_block()
+        self.bot.set_state("_диалог название")
+        create_keyboard(user_id, "Введите новое название темы", "отмена")
+
 
 def initiate_bot(user_id: int = None) -> Bot:
     """
@@ -724,7 +815,7 @@ def initiate_bot(user_id: int = None) -> Bot:
     :param user_id: vk id
     :return: bot instance
     """
-    states = ["меню", "системный промпт", "посмотреть диалоги"]
+    states = ["меню", "системный промпт", "посмотреть диалоги", "_изменить диалог"]
     if user_id is not None:
         bot = UserBot(user_id, states)
     else:
@@ -792,8 +883,10 @@ def initiate_bot(user_id: int = None) -> Bot:
             "usage": ShowDialogsNameCommand(manager, "Вывести список диалогов"),
         },
         {
-            "name": "вывести диалог по названию",
-            "usage": DialogByTopicCommand(manager, "Вывести диалог по названию"),
+            "name": "вывести диалог",
+            "usage": DialogByTopicCommand(
+                manager, "Вывести диалог по названию либо номеру"
+            ),
         },
         {
             "name": "_вывести диалог по названию",
@@ -852,6 +945,34 @@ def initiate_bot(user_id: int = None) -> Bot:
         {
             "name": "_удалить подтверждение",
             "usage": DeleteDatasetCommand(manager, "Подтверждение удаления диалога"),
+        },
+        {
+            "name": "изменить диалог",
+            "usage": ShowChangeCommand(
+                manager, "Вывести команды для изменения диалога"
+            ),
+        },
+        {
+            "name": "_ввести название для изменения",
+            "usage": SetDialogForChangeCommand(
+                manager, "Ввод названия диалога для изменения"
+            ),
+        },
+        {
+            "name": "вывести полностью",
+            "usage": ShowChangedDialogCommand(
+                manager,
+                "Вывести изменяемый диалог. Можно использовать"
+                "только когда тема выбрана.",
+            ),
+        },
+        {
+            "name": "изменить название диалога",
+            "usage": ChangeDialogNameCommand(
+                manager,
+                "Изменить название диалога. Можно использовать"
+                "только когда тема выбрана.",
+            ),
         },
     ]
     for command in commands:
