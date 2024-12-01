@@ -24,6 +24,8 @@ def create_keyboard(id: int, text: str, response="меню"):
             keyboard.add_button("Изменить диалог", color=VkKeyboardColor.PRIMARY)
             keyboard.add_button("Удалить диалог", color=VkKeyboardColor.NEGATIVE)
             keyboard.add_line()
+            keyboard.add_button("Пообщаться с ИИ", color=VkKeyboardColor.POSITIVE)
+            keyboard.add_line()
             keyboard.add_button("Помощь", color=VkKeyboardColor.PRIMARY)
         elif response == "системный промпт":
             keyboard.add_button(
@@ -50,13 +52,13 @@ def create_keyboard(id: int, text: str, response="меню"):
             keyboard.add_button("Вывести диалог", color=VkKeyboardColor.PRIMARY)
             keyboard.add_line()
             keyboard.add_button("Назад", color=VkKeyboardColor.NEGATIVE)
-        elif response == "изменить диалог":
+        elif response == "изменить диалог" or response == "_изменить диалог":
             keyboard.add_button(
                 "Изменить название диалога", color=VkKeyboardColor.PRIMARY
             )
             keyboard.add_line()
             keyboard.add_button(
-                "Изменить системный промпт", color=VkKeyboardColor.PRIMARY
+                "Изменить промпт диалога", color=VkKeyboardColor.PRIMARY
             )
             keyboard.add_line()
             keyboard.add_button(
@@ -68,7 +70,20 @@ def create_keyboard(id: int, text: str, response="меню"):
             keyboard.add_line()
             keyboard.add_button("Вывести полностью", color=VkKeyboardColor.PRIMARY)
             keyboard.add_line()
+            keyboard.add_button("Выход", color=VkKeyboardColor.NEGATIVE)
+        elif response == "изменение реплик":
+            keyboard.add_button("Вывести реплики", color=VkKeyboardColor.PRIMARY)
+            keyboard.add_line()
+            keyboard.add_button("Изменить реплику", color=VkKeyboardColor.PRIMARY)
+            keyboard.add_line()
             keyboard.add_button("Назад", color=VkKeyboardColor.NEGATIVE)
+        elif response == "выход":
+            keyboard = VkKeyboard(inline=True)
+            keyboard.add_button("выход", color=VkKeyboardColor.NEGATIVE)
+        elif response == "0":
+            keyboard = VkKeyboard(inline=True)
+            keyboard.add_button("0", color=VkKeyboardColor.NEGATIVE)
+
         vk.messages.send(
             user_id=id,
             random_id=get_random_id(),

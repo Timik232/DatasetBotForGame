@@ -11,6 +11,7 @@ from vk_api.longpoll import VkEventType
 
 from CommandClass import initiate_bot
 from keyboards import create_keyboard
+from llm_model import CustomAPILLM
 from password import decrypt_password, load_key
 from vk import longpoll, send_message
 
@@ -55,7 +56,7 @@ def check_and_backup(
                 print(f"Удалена старая резервная копия: {backups[0]}")
 
 
-def main(users: List[dict], ids: List[int]):
+def main(users: List[dict], ids: List[int], llm: CustomAPILLM):
     print("start")
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
@@ -67,7 +68,7 @@ def main(users: List[dict], ids: List[int]):
                 ):
                     send_message(user_id, "Неверный пароль")
                 else:
-                    bot = initiate_bot(user_id)
+                    bot = initiate_bot(llm, user_id)
                     users.append({"user_id": user_id, "bot": bot})
                     ids.append(user_id)
                     with open(os.path.join("bot_data", "users.pkl"), "wb") as file:
@@ -90,12 +91,15 @@ def main(users: List[dict], ids: List[int]):
 
 
 if __name__ == "__main__":
+    url = "http://localhost:1234/v1/chat/completions"
+    llm_model_name = "vika-bot-game"
+    llm = CustomAPILLM(api_url=url, model_name=llm_model_name)
     if os.path.exists(os.path.join("bot_data", "users.pkl")):
         with open(os.path.join("bot_data", "users.pkl"), "rb") as file:
             ids = pickle.load(file)
         users = []
         for user in ids:
-            users.append({"user_id": user, "bot": initiate_bot(user)})
+            users.append({"user_id": user, "bot": initiate_bot(llm, user)})
     else:
         users = []
         ids = []
@@ -107,9 +111,10 @@ if __name__ == "__main__":
     backup_thread.daemon = True
     backup_thread.start()
     print("Backup thread started")
+
     while True:
         try:
-            main(users, ids)
+            main(users, ids, llm)
         except requests.exceptions.ReadTimeout:
             print("read-timeout")
             time.sleep(600)

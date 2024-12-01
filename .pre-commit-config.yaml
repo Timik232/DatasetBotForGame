@@ -27,5 +27,4 @@ repos:
     rev: 5.0.0
     hooks:
       - id: flake8
-        args: [--max-line-length=90, --ignore=E203]
         additional_dependencies: [pep8-naming, flake8-bugbear ]

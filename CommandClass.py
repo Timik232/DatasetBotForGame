@@ -2,10 +2,24 @@ import inspect
 import json
 import os
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 
 from keyboards import create_keyboard
+from llm_model import CustomAPILLM
 from vk import send_document, send_message
+
+
+def save_data(data: dict) -> bool:
+    try:
+        with open(
+            os.path.join("datasets", "dataset_ru.json"),
+            "w",
+            encoding="UTF-8",
+        ) as file:
+            json.dump(data, file, ensure_ascii=False, indent=4)
+        return True
+    except Exception:
+        return False
 
 
 class Command(ABC):
@@ -51,13 +65,14 @@ class UserBot(Bot):
     Class for all user interactions. Include user state and user id
     """
 
-    def __init__(self, user_id: int, states: List[str] = None):
+    def __init__(self, user_id: int, llm: CustomAPILLM, states: List[str] = None):
         super().__init__()
         self.user_id = user_id
         self.states = states
         self.previous_state = ["меню"]
         self.state = "меню"
         self.block_execution = False
+        self.llm = llm
 
     def execute_command(self, msg: str, user_id: int):
         """
@@ -306,14 +321,95 @@ class ChangeDialogNameCommand(Command):
         self.receiver.input_new_dialog_name(user_id)
 
 
+class ChangeAvailableActionsCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.change_available_actions(user_id)
+
+
+class ChangeBotActionCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.change_action(user_id)
+
+
+class ChangeTextCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.change_text(user_id)
+
+
+class ExitCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.change_exit(user_id)
+
+
+class ChangeDialogSystemPromptCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.change_dialog_system(user_id)
+
+
+class ChangeShowReplicasCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.show_replicas(user_id)
+
+
+class StartChangeReplicaCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.start_change_replica(user_id)
+
+
+class ChooseReplicaCommand(Command):
+    def execute(self, user_id: int, msg: str):
+        self.receiver.change_dialog_replica(user_id, msg)
+
+
+class ChangeReplicaCommand(Command):
+    def execute(self, user_id, msg: str):
+        self.receiver.change_replica(user_id, msg)
+
+
+class StartChatWithAICommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.start_aichat(user_id)
+
+
+class ChangeDialogCommand(Command):
+    def execute(self, user_id: int):
+        self.receiver.show_change_commands(user_id)
+
+
+class AIAddSystemCommand(Command):
+    def execute(self, user_id: int, msg: str):
+        self.receiver.aichat_system(user_id, msg)
+
+
+class AIAddActionsCommand(Command):
+    def execute(self, user_id: int, msg: str):
+        self.receiver.aichat_actions(user_id, msg)
+
+
+class AIChatCommand(Command):
+    def execute(self, user_id: int, msg: str):
+        self.receiver.ai_chat(user_id, msg)
+
+
 class DatasetManager:
     def __init__(self, bot: UserBot):
         with open(
             os.path.join("datasets", "dataset_ru.json"), "r", encoding="UTF-8"
         ) as file:
             self.data = json.load(file)
-            self.bot = bot
-            self.bufName = ""
+        self.bot = bot
+        self.bufName = ""
+        self.changing_number: Optional[int] = None
+
+    def load_data(self):
+        """
+        function is used for data sync, when more than one user is active
+        :return:
+        """
+        with open(
+            os.path.join("datasets", "dataset_ru.json"), "r", encoding="UTF-8"
+        ) as file:
+            self.data = json.load(file)
 
     def system_prompt(self, user_id: int):
         """
@@ -367,12 +463,8 @@ class DatasetManager:
         :return:
         """
         self.data["system"] = message
-        with open(
-            os.path.join("datasets", "dataset_ru.json"),
-            "w",
-            encoding="UTF-8",
-        ) as file:
-            json.dump(self.data, file, ensure_ascii=False, indent=4)
+        save_data(self.data)
+        self.load_data()
         self.bot.state_pop()
         create_keyboard(
             user_id,
@@ -436,9 +528,12 @@ class DatasetManager:
             create_keyboard(user_id, "Диалог не найден.", "посмотреть диалоги")
             return
         try:
-            dialog = str(self.data["examples"][topic])
-        except Exception:
+            dialog = json.dumps(
+                self.data["examples"][topic], indent=4, ensure_ascii=False
+            )
+        except Exception as ex:
             create_keyboard(user_id, "Диалог не найден.", "посмотреть диалоги")
+            print(ex)
             return
         create_keyboard(user_id, dialog, "посмотреть диалоги")
 
@@ -473,8 +568,18 @@ class DatasetManager:
                 "Название должно быть от 3 до 40 символов.",
             )
             return
-        if self.bot.previous_state == "_изменить диалог":
-            pass
+        if self.bot.previous_state[-1] == "_изменить диалог":
+            replace = self.data["examples"].pop(self.bufName)
+            self.data["examples"][message] = replace
+            save_data(self.data)
+            self.load_data()
+            self.bufName = message
+            self.bot.invert_block()
+            self.bot.state_pop()
+            print(self.bufName)
+            create_keyboard(
+                user_id, f"Название изменено на {message}.", self.bot.get_state()
+            )
         else:
             self.data["examples"][message] = {}
             self.bot.set_state("_диалог системный промпт")
@@ -516,6 +621,16 @@ class DatasetManager:
         :param message:
         :return:
         """
+        if self.bot.previous_state[-1] == "_изменить диалог":
+            self.data["examples"][self.bufName]["prompt"]["History"][
+                0
+            ] = f"system: '{message}'"
+            self.bot.state_pop()
+            self.load_data()
+            create_keyboard(
+                user_id, "Системный промпт диалога изменен.", self.bot.get_state()
+            )
+            return
         self.data["examples"][self.bufName]["prompt"]["History"].append(
             f"system: '{message}'"
         )
@@ -553,6 +668,14 @@ class DatasetManager:
         actions = message.split(",")
         actions = [action.strip() for action in actions]
         self.data["examples"][self.bufName]["prompt"]["AvailableActions"] = actions
+        if self.bot.previous_state[-1] == "_изменить диалог":
+            self.bot.state_pop()
+            save_data(self.data)
+            self.load_data()
+            create_keyboard(
+                user_id, "Доступные действия изменены.", self.bot.get_state()
+            )
+            return
         self.bot.invert_block()
         self.bot.set_state("_диалог ввод пользователь")
         send_message(user_id, "Напишите сообщение от лица пользователя.")
@@ -641,12 +764,8 @@ class DatasetManager:
         else:
             self.bot.state_cancel_pop()
             self.bufName = ""
-            with open(
-                os.path.join("datasets", "dataset_ru.json"),
-                "w",
-                encoding="UTF-8",
-            ) as file:
-                json.dump(self.data, file, ensure_ascii=False, indent=4)
+            save_data(self.data)
+            self.load_data()
             create_keyboard(user_id, "Диалог добавлен.", self.bot.get_state())
 
     def input_end_action_dataset(self, user_id: int, message: str):
@@ -657,14 +776,18 @@ class DatasetManager:
         :return:
         """
         self.data["examples"][self.bufName]["answer"]["Content"]["Action"] = message
+        if self.bot.previous_state[-1] == "_изменить диалог":
+            self.bot.state_pop()
+            save_data(self.data)
+            self.load_data()
+            create_keyboard(
+                user_id, "Последнее действие изменено.", self.bot.get_state()
+            )
+            return
         self.bufName = ""
         self.bot.state_cancel_pop()
-        with open(
-            os.path.join("datasets", "dataset_ru.json"),
-            "w",
-            encoding="UTF-8",
-        ) as file:
-            json.dump(self.data, file, ensure_ascii=False, indent=4)
+        save_data(self.data)
+        self.load_data()
         create_keyboard(user_id, "Диалог добавлен.", self.bot.get_state())
 
     def cancel_dataset(self):
@@ -729,6 +852,8 @@ class DatasetManager:
         if message.lower() == "да":
             try:
                 del self.data["examples"][self.bufName]
+                save_data(self.data)
+                self.load_data()
             except Exception as ex:
                 print(ex)
                 self.bot.state_cancel_pop()
@@ -782,7 +907,7 @@ class DatasetManager:
             create_keyboard(user_id, "Диалог не найден.")
             return
         self.bufName = dialog_name
-        self.bot.invert_block()
+        self.bot.state_pop()
         self.bot.set_state("_изменить диалог")
         create_keyboard(
             user_id,
@@ -796,11 +921,17 @@ class DatasetManager:
         :param user_id:
         :return:
         """
-        create_keyboard(user_id, self.data["examples"][self.bufName], "изменить диалог")
+        create_keyboard(
+            user_id,
+            json.dumps(
+                self.data["examples"][self.bufName], indent=4, ensure_ascii=False
+            ),
+            "изменить диалог",
+        )
 
     def input_new_dialog_name(self, user_id: int):
         """
-        _диалог название
+        изменить название диалога
         :param user_id: vk id
         :return:
         """
@@ -808,16 +939,238 @@ class DatasetManager:
         self.bot.set_state("_диалог название")
         create_keyboard(user_id, "Введите новое название темы", "отмена")
 
+    def change_available_actions(self, user_id: int):
+        """
+        изменить доступные действия
+        :param user_id: vk id
+        :return:
+        """
+        self.bot.invert_block()
+        self.bot.set_state("_диалог ввод доступные действия")
+        create_keyboard(
+            user_id,
+            "Введите новые доступные действия через запятую.",
+            "отмена",
+        )
 
-def initiate_bot(user_id: int = None) -> Bot:
+    def change_action(self, user_id: int):
+        """
+        изменить действие
+        :param user_id: vk id
+        :return:
+        """
+        self.bot.invert_block()
+        self.bot.set_state("_диалог ввод последнее действие")
+        create_keyboard(
+            user_id, "Введите действие, которое ИИ должен совершить", "отмена"
+        )
+
+    def change_exit(self, user_id: int):
+        """
+        выход
+        :param user_id: vk id
+        :return:
+        """
+        self.bot.state_cancel_pop()
+        create_keyboard(user_id, "Выберите вариант", self.bot.get_state())
+
+    def change_dialog_system(self, user_id: int):
+        """
+        изменить промпт диалога
+        :param user_id:
+        :return:
+        """
+        self.bot.invert_block()
+        self.bot.set_state("_диалог ввод системный промпт")
+        create_keyboard(
+            user_id, "Введите системный промпт (инструкцию для ИИ) в диалоге.", "отмена"
+        )
+
+    def change_text(self, user_id: int):
+        self.bot.set_state("изменение реплик")
+        create_keyboard(user_id, "Выберите действие", self.bot.get_state())
+
+    def create_dialogs(self) -> list:
+        dialogs = self.data["examples"][self.bufName]["prompt"]["History"][1:]
+        dialogs.append(
+            "Последнее сообщение бота: "
+            + self.data["examples"][self.bufName]["answer"]["MessageText"]
+        )
+        return dialogs
+
+    def show_replicas(self, user_id: int):
+        """
+        вывести реплики
+        :param user_id: vk id
+        :return:
+        """
+        dialogs = self.create_dialogs()
+        message = ""
+        for i, replica in enumerate(dialogs):
+            message += str(i) + ") " + replica + "\n"
+        create_keyboard(user_id, message, self.bot.get_state())
+
+    def start_change_replica(self, user_id: int):
+        """
+        изменить реплику
+        :param user_id: vk id
+        :return:
+        """
+        self.bot.set_state("_ввод номера реплики")
+        self.bot.invert_block()
+        create_keyboard(user_id, "Введите номер реплики для изменения", "отмена")
+
+    def change_dialog_replica(self, user_id: int, message: str):
+        """
+        _ввод реплики
+        :param user_id: vk id
+        :param message: number of replica
+        :return:
+        """
+        try:
+            number = int(message)
+            dialogs = self.create_dialogs()
+            _ = dialogs[number]
+            if number >= len(dialogs) or number < 0:
+                raise IndexError
+            if number == len(dialogs) - 1:
+                self.changing_number = -1
+            else:
+                self.changing_number = number
+            self.bot.invert_block()
+            self.bot.set_state("_диалог ввод реплики")
+            create_keyboard(user_id, "Введите новую реплику", "отмена")
+        except ValueError:
+            self.bot.state_cancel_pop()
+            create_keyboard(user_id, "Нужно ввести номер.", self.bot.get_state())
+            return
+        except IndexError:
+            self.bot.state_cancel_pop()
+            create_keyboard(user_id, "Неверный номер реплики.", self.bot.get_state())
+            return
+
+    def change_replica(self, user_id: int, message: str):
+        """
+        _диалог ввод реплики
+        :return:
+        """
+        dialogs = self.create_dialogs()
+        if self.changing_number == -1:
+            self.data["examples"][self.bufName]["answer"]["MessageText"] = message
+        else:
+            buf_dialog = dialogs[self.changing_number]
+            dialogs[self.changing_number] = (
+                buf_dialog[: buf_dialog.find(":") + 1] + message
+            )
+            self.data["examples"][self.bufName]["prompt"]["History"] = dialogs[:-1]
+        self.bot.state_cancel_pop()
+        save_data(self.data)
+        self.load_data()
+        create_keyboard(user_id, "Реплика изменена", self.bot.get_state())
+
+    def show_change_commands(self, user_id: int):
+        """
+        _изменить диалог
+        :param user_id: vk id
+        :return:
+        """
+        create_keyboard(user_id, "Выберите действие", self.bot.get_state())
+
+    def start_aichat(self, user_id: int):
+        """
+        пообщаться с ии
+        :param user_id: vk id
+        :return:
+        """
+        self.bot.invert_block()
+        self.bot.set_state("_указать системный промпт")
+        create_keyboard(
+            user_id,
+            "Начнем чат с ИИ. Нужен ли новое системное указание? Введите "
+            "0, чтобы пропустить, иначе введите указание (системный промпт).",
+            "0",
+        )
+
+    def aichat_system(self, user_id: int, msg: str):
+        """
+        _указать системный промпт
+        :param user_id: vk id
+        :param msg: system prompt
+        :return:
+        """
+        self.bot.invert_block()
+        self.bot.set_state("_указать доступные действия")
+        next_text = "Введите доступные действия через запятую. либо 0. чтобы пропустить"
+        if msg == "0":
+            create_keyboard(user_id, next_text, "0")
+        else:
+            self.bot.llm.set_system(msg)
+            create_keyboard(
+                user_id, f"Системное указание установлено. {next_text}", "0"
+            )
+
+    def aichat_actions(self, user_id: int, msg: str):
+        """
+        _указать доступные действия
+        :param user_id: vk id
+        :param msg: actions
+        :return:
+        """
+        self.bot.invert_block()
+        self.bot.set_state("_чат с ии")
+        if msg == "0":
+            send_message(user_id, "Можете писать сообщение.")
+        else:
+            actions = msg.split(",")
+            actions = [action.strip() for action in actions]
+            self.bot.llm.set_available_actions(actions)
+            send_message(user_id, "Действия установлены. Можете писать сообщение.")
+
+    def ai_chat(self, user_id: int, msg: str):
+        """
+        _чат с ии
+        :param user_id: vk id
+        :param msg:
+        :return:
+        """
+        self.bot.set_state("_чат с ии")
+        if msg.lower() == "выход":
+            self.data
+            self.bot.state_cancel_pop()
+            create_keyboard(user_id, "Чат завершен", self.bot.get_state())
+        else:
+            self.bot.invert_block()
+            self.bot.set_state("_чат с ии")
+            self.bot.llm.add_to_history(msg, is_bot=False)
+            answer = self.bot.llm(msg)
+            self.bot.llm.set_previous_generation(answer)
+            try:
+                json_answer = json.loads(answer)
+                self.bot.llm.add_to_history(json_answer["MessageText"], is_bot=True)
+            except Exception:
+                send_message(
+                    user_id,
+                    "ии не соблюдает формат json, сохранение диалога невозможно.",
+                )
+
+            create_keyboard(user_id, answer, "выход")
+
+
+def initiate_bot(llm: CustomAPILLM, user_id: int = None) -> Bot:
     """
     Function to create bot instance, especially for current user
     :param user_id: vk id
     :return: bot instance
     """
-    states = ["меню", "системный промпт", "посмотреть диалоги", "_изменить диалог"]
+    states = [
+        "меню",
+        "системный промпт",
+        "посмотреть диалоги",
+        "_изменить диалог",
+        "изменение реплик",
+    ]
     if user_id is not None:
-        bot = UserBot(user_id, states)
+        bot = UserBot(user_id, llm, states)
     else:
         bot = Bot()
     manager = DatasetManager(bot)
@@ -974,6 +1327,75 @@ def initiate_bot(user_id: int = None) -> Bot:
                 "только когда тема выбрана.",
             ),
         },
+        {
+            "name": "изменить доступные действия",
+            "usage": ChangeAvailableActionsCommand(
+                manager, "Изменить доступные действия"
+            ),
+        },
+        {
+            "name": "изменить действие",
+            "usage": ChangeBotActionCommand(manager, "Изменить действие бота"),
+        },
+        {
+            "name": "изменить текст",
+            "usage": ChangeTextCommand(manager, "Изменить текст в диалоге"),
+        },
+        {
+            "name": "выход",
+            "usage": ExitCommand(
+                manager,
+                "Выход с удалением названия темы, применяется в изменении диалога.",
+            ),
+        },
+        {
+            "name": "_изменить диалог",
+            "usage": ChangeDialogCommand(manager, "Вывести меню для изменения диалога"),
+        },
+        {
+            "name": "изменить промпт диалога",
+            "usage": ChangeDialogSystemPromptCommand(
+                manager,
+                "Изменить промпт диалога, который используется"
+                "для дополнительных указаний для ИИ",
+            ),
+        },
+        {
+            "name": "вывести реплики",
+            "usage": ChangeShowReplicasCommand(manager, "Вывести все реплики диалога."),
+        },
+        {
+            "name": "изменить реплику",
+            "usage": StartChangeReplicaCommand(manager, "Изменить реплику в диалоге"),
+        },
+        {
+            "name": "_ввод номера реплики",
+            "usage": ChooseReplicaCommand(manager, "Выбор реплики для изменения."),
+        },
+        {
+            "name": "_диалог ввод реплики",
+            "usage": ChangeReplicaCommand(manager, "Ввод новой реплики."),
+        },
+        {
+            "name": "пообщаться с ии",
+            "usage": StartChatWithAICommand(
+                manager,
+                "Пообщаться с ИИ, чтобы протестировать либо " "пополнить датасет",
+            ),
+        },
+        {
+            "name": "_указать системный промпт",
+            "usage": AIAddSystemCommand(
+                manager, "Добавить системный промпт в самом начале"
+            ),
+        },
+        {
+            "name": "_указать доступные действия",
+            "usage": AIAddActionsCommand(
+                manager, "Указать системный промпт и приступить к действиям"
+            ),
+        },
+        {"name": "_чат с ии", "usage": AIChatCommand(manager, "Чат с ИИ")},
     ]
     for command in commands:
         bot.set_command(command["name"], command["usage"])
