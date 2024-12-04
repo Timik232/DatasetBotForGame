@@ -558,14 +558,19 @@ class DatasetManager:
         self.bot.invert_block()
         if message in self.data["examples"]:
             self.bot.state_pop()
-            self.bot.invert_block()
-            create_keyboard(user_id, "Такая тема уже существует.", self.bot.get_state())
-            return
-        if len(message) <= 3 or len(message) >= 40:
             self.bot.set_state("_диалог название")
             send_message(
                 user_id,
-                "Название должно быть от 3 до 40 символов.",
+                "Такая тема уже существует, введите снова.",
+            )
+            # create_keyboard(user_id, "Такая тема уже существует.", self.bot.get_state())
+            return
+        if len(message) <= 3 or len(message) >= 40:
+            self.bot.state_pop()
+            self.bot.set_state("_диалог название")
+            send_message(
+                user_id,
+                "Название должно быть от 3 до 40 символов, введите снова.",
             )
             return
         if self.bot.previous_state[-1] == "_изменить диалог":
@@ -576,9 +581,25 @@ class DatasetManager:
             self.bufName = message
             self.bot.invert_block()
             self.bot.state_pop()
-            print(self.bufName)
             create_keyboard(
                 user_id, f"Название изменено на {message}.", self.bot.get_state()
+            )
+        elif self.bot.previous_state[-1] == "_чат с ии":
+            self.bot.invert_block()
+            self.data["examples"][message] = {}
+            self.data["examples"][message]["prompt"] = {}
+            self.data["examples"][message]["prompt"]["History"] = self.bot.llm.history
+            self.data["examples"][message]["prompt"][
+                "AvailableActions"
+            ] = self.bot.llm.available_actions
+            self.data["examples"][message]["answer"] = self.bot.llm.previous_generation
+            self.bot.state_cancel_pop()
+            save_data(self.data)
+            self.load_data()
+            create_keyboard(
+                user_id,
+                "Диалог сохранён с названием " + message + ".",
+                self.bot.get_state(),
             )
         else:
             self.data["examples"][message] = {}
@@ -1135,9 +1156,8 @@ class DatasetManager:
         """
         self.bot.set_state("_чат с ии")
         if msg.lower() == "выход":
-            self.data
-            self.bot.state_cancel_pop()
-            create_keyboard(user_id, "Чат завершен", self.bot.get_state())
+            self.bot.set_state("_диалог названиее")
+            send_message(user_id, "Введите название диалога для сохранения.")
         else:
             self.bot.invert_block()
             self.bot.set_state("_чат с ии")
