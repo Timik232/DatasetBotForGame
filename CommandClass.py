@@ -1145,6 +1145,7 @@ class DatasetManager:
             actions = msg.split(",")
             actions = [action.strip() for action in actions]
             self.bot.llm.set_available_actions(actions)
+            self.bot.llm.add_to_history(start=True)
             send_message(user_id, "Действия установлены. Можете писать сообщение.")
 
     def ai_chat(self, user_id: int, msg: str):
@@ -1156,16 +1157,16 @@ class DatasetManager:
         """
         self.bot.set_state("_чат с ии")
         if msg.lower() == "выход":
-            self.bot.set_state("_диалог названиее")
+            self.bot.set_state("_диалог название")
+            self.bot.invert_block()
             send_message(user_id, "Введите название диалога для сохранения.")
         else:
             self.bot.invert_block()
-            self.bot.set_state("_чат с ии")
             self.bot.llm.add_to_history(msg, is_bot=False)
             answer = self.bot.llm(msg)
-            self.bot.llm.set_previous_generation(answer)
             try:
                 json_answer = json.loads(answer)
+                self.bot.llm.set_previous_generation(json_answer)
                 self.bot.llm.add_to_history(json_answer["MessageText"], is_bot=True)
             except Exception:
                 send_message(
@@ -1174,6 +1175,7 @@ class DatasetManager:
                 )
 
             create_keyboard(user_id, answer, "выход")
+            self.load_data()
 
 
 def initiate_bot(llm: CustomAPILLM, user_id: int = None) -> Bot:

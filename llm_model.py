@@ -47,9 +47,16 @@ class CustomAPILLM:
         self.system = f"system: '{system}'"
 
     def set_available_actions(self, available_actions: List[str]):
-        self.available_actions = self.available_actions.extend(available_actions)
+        self.available_actions.extend(available_actions)
 
-    def add_to_history(self, msg: str, is_bot: bool, start=False):
+    def add_to_history(self, msg="", is_bot=False, start=False):
+        """
+
+        :param msg: necessary
+        :param is_bot: necessary
+        :param start: optional
+        :return:
+        """
         if start:
             self.history.append(self.system)
         else:
