@@ -132,6 +132,7 @@ class UserBot(Bot):
         Return to the previous state
         """
         self.state_pop()
+        self.llm.clear()
         self.execute_command(self.state, self.user_id)
 
     def invert_block(self) -> bool:
@@ -593,6 +594,7 @@ class DatasetManager:
                 "AvailableActions"
             ] = self.bot.llm.available_actions
             self.data["examples"][message]["answer"] = self.bot.llm.previous_generation
+            self.bot.llm.clear()
             self.bot.state_cancel_pop()
             save_data(self.data)
             self.load_data()

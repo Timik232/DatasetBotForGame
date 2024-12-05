@@ -14,7 +14,7 @@ class CustomAPILLM:
         self.model_name = model_name
         self.history = []
         self.available_actions = ["Разговор"]
-        self.system = (
+        self.default_system = (
             "system: 'Ты - помощник по имени ВИКА на заброшенной космической станции. "
             "У тебя есть доступ к системам станции. Отвечай только в формате JSON с ключами "
             "'MessageText' и 'Actions', содержащими как минимум одно "
@@ -23,6 +23,7 @@ class CustomAPILLM:
             "Заканчивайте ответ символом }. Ниже - история сообщений из предыдущего диалога "
             "с пользователем, а также список доступных тебе действий."
         )
+        self.system = self.default_system
         self.previous_generation: Optional[dict] = None
 
     def get_text_from_response(self, response: dict) -> str:
@@ -122,3 +123,9 @@ class CustomAPILLM:
             f"беря во внимания всю предыдущую информацию.\nСообщение пользователя:\n{msg}"
         )
         return user_message
+
+    def clear(self):
+        self.available_actions = ["Разговор"]
+        self.history = []
+        self.previous_generation = None
+        self.system = self.default_system
