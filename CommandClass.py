@@ -1159,6 +1159,7 @@ class DatasetManager:
         """
         self.bot.set_state("_чат с ии")
         if msg.lower() == "выход":
+            self.bot.llm.delete_last()
             self.bot.set_state("_диалог название")
             self.bot.invert_block()
             send_message(user_id, "Введите название диалога для сохранения.")

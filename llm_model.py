@@ -67,6 +67,9 @@ class CustomAPILLM:
                 msg = f"user: '{msg}'"
             self.history.append(msg)
 
+    def delete_last(self):
+        self.history.pop()
+
     def set_previous_generation(self, msg: str):
         self.previous_generation = msg
 
