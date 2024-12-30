@@ -1143,6 +1143,7 @@ class DatasetManager:
         self.bot.set_state("_чат с ии")
         if msg == "0":
             send_message(user_id, "Можете писать сообщение.")
+            self.bot.llm.add_to_history(start=True)
         else:
             actions = msg.split(",")
             actions = [action.strip() for action in actions]
