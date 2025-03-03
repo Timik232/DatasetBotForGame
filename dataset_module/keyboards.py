@@ -1,7 +1,7 @@
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 from vk_api.utils import get_random_id
 
-from vk import vk
+from .vk import vk
 
 
 def create_keyboard(id: int, text: str, response="меню"):

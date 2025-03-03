@@ -4,9 +4,9 @@ import os
 from abc import ABC, abstractmethod
 from typing import List, Optional
 
-from keyboards import create_keyboard
-from llm_model import CustomAPILLM
-from vk import send_document, send_message
+from .keyboards import create_keyboard
+from .llm_model import CustomAPILLM
+from .vk import send_document, send_message
 
 
 def save_data(data: dict) -> bool:

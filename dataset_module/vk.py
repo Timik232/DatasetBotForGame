@@ -5,7 +5,7 @@ import vk_api
 from vk_api.longpoll import VkLongPoll
 from vk_api.utils import get_random_id
 
-from private_api import PRIVATE_API
+from dataset_module.private_api import PRIVATE_API
 
 vk_session = vk_api.VkApi(token=PRIVATE_API)
 vk = vk_session.get_api()

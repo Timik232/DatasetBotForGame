@@ -9,11 +9,11 @@ from typing import List
 import requests
 from vk_api.longpoll import VkEventType
 
-from CommandClass import initiate_bot
-from keyboards import create_keyboard
-from llm_model import CustomAPILLM
-from password import decrypt_password, load_key
-from vk import longpoll, send_message
+from dataset_module.CommandClass import initiate_bot
+from dataset_module.keyboards import create_keyboard
+from dataset_module.llm_model import CustomAPILLM
+from dataset_module.password import decrypt_password, load_key
+from dataset_module.vk import longpoll, send_message
 
 
 def check_and_backup(

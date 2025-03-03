@@ -45,7 +45,7 @@ if __name__ == "__main__":
     password = ""  # Enter your password
     encrypted_password = encrypt_password(password, key)
     print(f"Encrypted password: {encrypted_password}")
-    with open("bot_data/encrypted_password.txt", "wb") as file:
+    with open("../bot_data/encrypted_password.txt", "wb") as file:
         file.write(encrypted_password)
     decrypted_password = decrypt_password(encrypted_password, key)
     print(f"Decrypted password: {decrypted_password}")

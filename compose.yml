@@ -5,3 +5,5 @@ services:
       dockerfile: Dockerfile
     environment:
       - PYTHONUNBUFFERED=1
+    volumes:
+      - ./datasets:/datasets

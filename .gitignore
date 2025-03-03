@@ -162,7 +162,7 @@ cython_debug/
 #.idea/
 import vk-api
 .idea
-private_api.py
+dataset_module/private_api.py
 secret.key
 .idea/**/workspace.xml
 .idea/**/tasks.xml
