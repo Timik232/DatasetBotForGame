@@ -5,7 +5,7 @@ from requests.auth import HTTPBasicAuth
 def test():
     base_url = "https://dataset.ser13volk.me"
     url = base_url + "/dataset_ru"
-    response = requests.get(url, auth=HTTPBasicAuth("admin", "twts"))
+    response = requests.get(url, auth=HTTPBasicAuth("admin", ""))
     if response.ok:
         print(response.text)
     else:
@@ -13,7 +13,7 @@ def test():
 
 
     url = base_url + "/backups"
-    response = requests.get(url, auth=HTTPBasicAuth("admin", "twts"))
+    response = requests.get(url, auth=HTTPBasicAuth("admin", ""))
     if response.ok:
         with open("backups.zip", "wb") as f:
             f.write(response.content)
