@@ -19,7 +19,7 @@ def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
     key = load_key()
     try:
         password = decrypt_password(
-                    open("bot_data/encrypted_password.txt", "rb").read(), key
+                    open("bot_data/encrypted_fastapi_password.txt", "rb").read(), key
                 )
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="Файл с зашифрованным паролем не найден")
