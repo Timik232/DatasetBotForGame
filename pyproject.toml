@@ -10,7 +10,10 @@ readme = "README.md"
 python = "^3.10.15"
 requests = "^2.32.3"
 vk-api = "^11.9.9"
-cryptography = "^36.0.0"
+cryptography = "^44.0.1"
+fastapi = "^0.115.10"
+uvicorn = "^0.34.0"
+python-multipart = "^0.0.20"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"

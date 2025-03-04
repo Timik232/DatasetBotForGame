@@ -2,6 +2,8 @@
 File to work with passwords, encrypt and decrypt them,
 create a key and an encrypted password
 """
+import os
+
 from cryptography.fernet import Fernet
 
 
@@ -14,11 +16,11 @@ def generate_key():
         key_file.write(key)
 
 
-def load_key() -> bytes:
+def load_key(base_path="") -> bytes:
     """
     Loads the key from the current directory named `secret.key`
     """
-    return open("secret.key", "rb").read()
+    return open(os.path.join(base_path, "secret.key"), "rb").read()
 
 
 def encrypt_password(password: str, key: bytes) -> bytes:
@@ -39,13 +41,17 @@ def decrypt_password(encrypted_password: bytes, key: bytes) -> str:
     return decrypted_password
 
 
-if __name__ == "__main__":
+def encrypt_main():
     generate_key()
-    key = load_key()
+    key = load_key(base_path="..")
     password = ""  # Enter your password
     encrypted_password = encrypt_password(password, key)
     print(f"Encrypted password: {encrypted_password}")
-    with open("../bot_data/encrypted_password.txt", "wb") as file:
+    with open("../bot_data/encrypted_fastapi_password.txt", "wb") as file:
         file.write(encrypted_password)
     decrypted_password = decrypt_password(encrypted_password, key)
     print(f"Decrypted password: {decrypted_password}")
+
+
+if __name__ == "__main__":
+    encrypt_main()

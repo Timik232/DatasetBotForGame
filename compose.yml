@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    ports:
+      - "500:500"
     environment:
       - PYTHONUNBUFFERED=1
     volumes:

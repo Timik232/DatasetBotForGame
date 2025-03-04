@@ -436,6 +436,7 @@ class DatasetManager:
         :param user_id: vk id
         :return:
         """
+        self.load_data()
         create_keyboard(
             user_id, f"Системный промпт:\n{self.data['system']}", "системный промпт"
         )
@@ -479,6 +480,7 @@ class DatasetManager:
         :param user_id: vk id
         :return:
         """
+        self.load_data()
         send_document(user_id, os.path.join("datasets", "dataset_ru.json"))
         create_keyboard(user_id, "JSON-структура отправлена.")
 
@@ -488,6 +490,7 @@ class DatasetManager:
         :param user_id: vk id
         :return:
         """
+        self.load_data()
         create_keyboard(user_id, "Выберите вариант.", "посмотреть диалоги")
 
     def show_dialogs_names(self, user_id: int):
@@ -496,6 +499,7 @@ class DatasetManager:
         :param user_id: vk id
         :return:
         """
+        self.load_data()
         topics = ""
         for i, topic in enumerate(self.data["examples"]):
             topics += str(i) + ") " + topic + "\n"
@@ -507,6 +511,7 @@ class DatasetManager:
         :param user_id: vk id
         :return:
         """
+        self.load_data()
         self.bot.set_state("_вывести диалог по названию")
         self.bot.invert_block()
         create_keyboard(user_id, "Введите название либо номер диалога.", "отмена")
@@ -518,6 +523,7 @@ class DatasetManager:
         :param topic:
         :return:
         """
+        self.load_data()
         topic = topic.lower().replace(" ", "_")
         self.bot.state_pop()
         try:
@@ -649,6 +655,7 @@ class DatasetManager:
                 0
             ] = f"system: '{message}'"
             self.bot.state_pop()
+            save_data(self.data)
             self.load_data()
             create_keyboard(
                 user_id, "Системный промпт диалога изменен.", self.bot.get_state()

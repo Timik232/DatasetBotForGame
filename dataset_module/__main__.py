@@ -8,6 +8,7 @@ from typing import List
 
 import requests
 from vk_api.longpoll import VkEventType
+import uvicorn
 
 from dataset_module.CommandClass import initiate_bot
 from dataset_module.keyboards import create_keyboard
@@ -15,6 +16,11 @@ from dataset_module.llm_model import CustomAPILLM
 from dataset_module.password import decrypt_password, load_key
 from dataset_module.vk import longpoll, send_message
 
+
+def start_uvicorn():
+    uvicorn.run(
+        "dataset_module.fastapi_dataset:app", host="0.0.0.0", port=500, reload=False
+    )
 
 def check_and_backup(
     file_path: str, backup_dir: str, sleep_time: int = 20, backup_amounts: int = 5
@@ -108,6 +114,9 @@ if __name__ == "__main__":
     backup_thread = threading.Thread(
         target=check_and_backup, args=(dataset_path, backup_dir)
     )
+    uvicorn_thread = threading.Thread(target=start_uvicorn)
+    uvicorn_thread.daemon = True
+    uvicorn_thread.start()
     backup_thread.daemon = True
     backup_thread.start()
     print("Backup thread started")
