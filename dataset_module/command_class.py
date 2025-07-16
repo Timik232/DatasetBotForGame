@@ -453,6 +453,7 @@ class DatasetManager:
             " Если вы передумали, нажмите или введите ОТМЕНА. "
             "Иначе введите новый системный промпт.",
             "отмена",
+            True,
         )
         self.bot.invert_block()
         self.bot.set_state("_ввод системного промпта")
@@ -514,7 +515,7 @@ class DatasetManager:
         self.load_data()
         self.bot.set_state("_вывести диалог по названию")
         self.bot.invert_block()
-        create_keyboard(user_id, "Введите название либо номер диалога.", "отмена")
+        create_keyboard(user_id, "Введите название либо номер диалога.", "отмена", True)
 
     def show_dialog_by_name(self, user_id: int, topic: str):
         """
@@ -552,7 +553,7 @@ class DatasetManager:
         """
         self.bot.invert_block()
         self.bot.set_state("_диалог название")
-        create_keyboard(user_id, "Введите название темы", "отмена")
+        create_keyboard(user_id, "Введите название темы", "отмена", True)
 
     def set_dialog_name(self, user_id: int, message: str):
         """
@@ -617,6 +618,7 @@ class DatasetManager:
                 user_id,
                 "Нужен новый системный промпт? Если не знаете, выбирайте НЕТ.",
                 "данет",
+                True,
             )
 
     def input_system_confirmation_dataset(self, user_id: int, message: str):
@@ -641,6 +643,7 @@ class DatasetManager:
                 user_id,
                 "Нужно ли вводить доступные действия? Если не знаете, выбирайте НЕТ",
                 "данет",
+                True,
             )
 
     def new_system_dataset(self, user_id: int, message: str):
@@ -670,6 +673,7 @@ class DatasetManager:
             user_id,
             "Нужно ли вводить доступные действия? Если не знаете, выбирайте НЕТ",
             "данет",
+            True,
         )
 
     def actions_confirm_dataset(self, user_id: int, message: str):
@@ -746,6 +750,7 @@ class DatasetManager:
                     "Нужно ли изменять последнее действие, которое совершит ИИ? "
                     "Если не знаете, выбирайте НЕТ.",
                     "данет",
+                    True,
                 )
         else:
             self.data["examples"][self.bufName]["prompt"]["History"].append(
@@ -846,6 +851,7 @@ class DatasetManager:
             "что вы делаете. Если вы передумали, нажмите или введите ОТМЕНА.\n"
             "Напишите название диалога для удаления.",
             "отмена",
+            True,
         )
 
     def delete_dataset(self, user_id: int, message: str):
@@ -870,6 +876,7 @@ class DatasetManager:
                 f"Вы уверены, что хотите удалить диалог '{self.bufName}'? "
                 f"Это действие необратимо.",
                 "данет",
+                True,
             )
 
     def confirm_delete_dataset(self, user_id: int, message: str):
@@ -912,7 +919,7 @@ class DatasetManager:
         self.bot.set_state("_ввести название для изменения")
         self.bot.invert_block()
         create_keyboard(
-            user_id, "Введите название темы или порядковый номер.", "отмена"
+            user_id, "Введите название темы или порядковый номер.", "отмена", True
         )
 
     def set_dialog_for_change(self, user_id: int, msg: str):
@@ -967,7 +974,7 @@ class DatasetManager:
         """
         self.bot.invert_block()
         self.bot.set_state("_диалог название")
-        create_keyboard(user_id, "Введите новое название темы", "отмена")
+        create_keyboard(user_id, "Введите новое название темы", "отмена", True)
 
     def change_available_actions(self, user_id: int):
         """
@@ -978,9 +985,7 @@ class DatasetManager:
         self.bot.invert_block()
         self.bot.set_state("_диалог ввод доступные действия")
         create_keyboard(
-            user_id,
-            "Введите новые доступные действия через запятую.",
-            "отмена",
+            user_id, "Введите новые доступные действия через запятую.", "отмена", True
         )
 
     def change_action(self, user_id: int):
@@ -992,7 +997,7 @@ class DatasetManager:
         self.bot.invert_block()
         self.bot.set_state("_диалог ввод последнее действие")
         create_keyboard(
-            user_id, "Введите действие, которое ИИ должен совершить", "отмена"
+            user_id, "Введите действие, которое ИИ должен совершить", "отмена", True
         )
 
     def change_exit(self, user_id: int):
@@ -1013,7 +1018,10 @@ class DatasetManager:
         self.bot.invert_block()
         self.bot.set_state("_диалог ввод системный промпт")
         create_keyboard(
-            user_id, "Введите системный промпт (инструкцию для ИИ) в диалоге.", "отмена"
+            user_id,
+            "Введите системный промпт (инструкцию для ИИ) в диалоге.",
+            "отмена",
+            True,
         )
 
     def change_text(self, user_id: int):
@@ -1048,7 +1056,7 @@ class DatasetManager:
         """
         self.bot.set_state("_ввод номера реплики")
         self.bot.invert_block()
-        create_keyboard(user_id, "Введите номер реплики для изменения", "отмена")
+        create_keyboard(user_id, "Введите номер реплики для изменения", "отмена", True)
 
     def change_dialog_replica(self, user_id: int, message: str):
         """
@@ -1069,7 +1077,7 @@ class DatasetManager:
                 self.changing_number = number
             self.bot.invert_block()
             self.bot.set_state("_диалог ввод реплики")
-            create_keyboard(user_id, "Введите новую реплику", "отмена")
+            create_keyboard(user_id, "Введите новую реплику", "отмена", True)
         except ValueError:
             self.bot.state_cancel_pop()
             create_keyboard(user_id, "Нужно ввести номер.", self.bot.get_state())
@@ -1119,6 +1127,7 @@ class DatasetManager:
             "Начнем чат с ИИ. Нужен ли новое системное указание? Введите "
             "0, чтобы пропустить, иначе введите указание (системный промпт).",
             "0",
+            True,
         )
 
     def aichat_system(self, user_id: int, msg: str):
@@ -1136,7 +1145,7 @@ class DatasetManager:
         else:
             self.bot.llm.set_system(msg)
             create_keyboard(
-                user_id, f"Системное указание установлено. {next_text}", "0"
+                user_id, f"Системное указание установлено. {next_text}", "0", True
             )
 
     def aichat_actions(self, user_id: int, msg: str):
@@ -1185,7 +1194,7 @@ class DatasetManager:
                     "ии не соблюдает формат json, сохранение диалога невозможно.",
                 )
 
-            create_keyboard(user_id, answer, "выход")
+            create_keyboard(user_id, answer, "выход", True)
             self.load_data()
 
 

@@ -41,18 +41,24 @@ class CustomAPILLM:
         """
         try:
             return response["choices"][0]["message"]["content"]
-        except KeyError:
-            raise ValueError("Invalid response format")
+        except KeyError as e:
+            raise ValueError("Invalid response format") from e
 
     def set_system(self, system: str):
+        """
+        Sets the system message.
+        """
         self.system = f"system: '{system}'"
 
     def set_available_actions(self, available_actions: List[str]):
+        """
+        Sets the available actions.
+        """
         self.available_actions.extend(available_actions)
 
     def add_to_history(self, msg="", is_bot=False, start=False):
         """
-
+        Add message to history
         :param msg: necessary
         :param is_bot: necessary
         :param start: optional
@@ -68,9 +74,15 @@ class CustomAPILLM:
             self.history.append(msg)
 
     def delete_last(self):
+        """
+        Delete last message from history
+        """
         self.history.pop()
 
     def set_previous_generation(self, msg: str):
+        """
+        Set previous generation
+        """
         self.previous_generation = msg
 
     def __call__(self, prompt: str) -> str:
@@ -107,6 +119,9 @@ class CustomAPILLM:
             )
 
     def get_user_prompt(self, msg: str):
+        """
+        Get user prompt for LLM
+        """
         user_message = (
             "Системное сообщение, которому ты должен следовать, "
             "отмечено словом 'system'. "
@@ -128,6 +143,9 @@ class CustomAPILLM:
         return user_message
 
     def clear(self):
+        """
+        Clears the history and sets the default system message.
+        """
         self.available_actions = ["Разговор"]
         self.history = []
         self.previous_generation = None

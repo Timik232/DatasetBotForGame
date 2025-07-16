@@ -3,6 +3,7 @@ import pickle
 import shutil
 import threading
 import time
+import logging
 from datetime import datetime
 from typing import List
 from dotenv import load_dotenv
@@ -16,6 +17,7 @@ from dataset_module.keyboards import create_keyboard
 from dataset_module.llm_model import CustomAPILLM
 from dataset_module.password import decrypt_password, load_key
 from dataset_module.vk import longpoll, send_message
+from dataset_module.logging_config import configure_logging
 
 
 def start_uvicorn():
@@ -53,7 +55,7 @@ def check_and_backup(
                 f'{file_name}_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json',
             )
             shutil.copy2(file_path, backup_file)
-            print(f"Файл был изменен. Создана резервная копия: {backup_file}")
+            logging.info(f"Файл был изменен. Создана резервная копия: {backup_file}")
 
             backups = sorted(
                 [
@@ -64,14 +66,14 @@ def check_and_backup(
             )
             if len(backups) > backup_amounts:
                 os.remove(os.path.join(backup_dir, backups[0]))
-                print(f"Удалена старая резервная копия: {backups[0]}")
+                logging.info(f"Удалена старая резервная копия: {backups[0]}")
 
 
 def main_loop(users: List[dict], ids: List[int], llm: CustomAPILLM):
     """
     Main loop of the script, that listens for new messages from users
     """
-    print("start")
+    logging.info("start")
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
             user_id = event.user_id
@@ -100,7 +102,7 @@ def main_loop(users: List[dict], ids: List[int], llm: CustomAPILLM):
                             try:
                                 bot.execute_command(msg, user_id)
                             except Exception as ex:
-                                print(ex)
+                                logging.error(ex)
                                 send_message(user_id, "Произошла ошибка")
 
 
@@ -108,6 +110,7 @@ def main():
     """
     Entry point of the script
     """
+    configure_logging(logging.DEBUG)
     load_dotenv()
     url = os.getenv("API_URL")
     llm_model_name = os.getenv("LLM_NAME")
@@ -135,16 +138,16 @@ def main():
     uvicorn_thread.start()
     backup_thread.daemon = True
     backup_thread.start()
-    print("Backup thread started")
+    logging.info("Backup thread started")
 
     while True:
         try:
             main_loop(users, ids, llm)
         except requests.exceptions.ReadTimeout:
-            print("read-timeout")
+            logging.warning("read-timeout")
             time.sleep(600)
         except Exception as ex:
-            print(ex)
+            logging.error(ex)
 
 
 if __name__ == "__main__":
