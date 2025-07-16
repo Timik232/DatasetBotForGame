@@ -1192,6 +1192,7 @@ class DatasetManager:
 def initiate_bot(llm: CustomAPILLM, user_id: int = None) -> Bot:
     """
     Function to create bot instance, especially for current user
+    :param llm: llm instance with api
     :param user_id: vk id
     :return: bot instance
     """

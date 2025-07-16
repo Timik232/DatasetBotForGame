@@ -5,12 +5,13 @@ import threading
 import time
 from datetime import datetime
 from typing import List
+from dotenv import load_dotenv
 
 import requests
 from vk_api.longpoll import VkEventType
 import uvicorn
 
-from dataset_module.CommandClass import initiate_bot
+from dataset_module.command_class import initiate_bot
 from dataset_module.keyboards import create_keyboard
 from dataset_module.llm_model import CustomAPILLM
 from dataset_module.password import decrypt_password, load_key
@@ -18,9 +19,13 @@ from dataset_module.vk import longpoll, send_message
 
 
 def start_uvicorn():
+    """
+    Start uvicorn server
+    """
     uvicorn.run(
         "dataset_module.fastapi_dataset:app", host="0.0.0.0", port=500, reload=False
     )
+
 
 def check_and_backup(
     file_path: str, backup_dir: str, sleep_time: int = 20, backup_amounts: int = 5
@@ -62,7 +67,10 @@ def check_and_backup(
                 print(f"Удалена старая резервная копия: {backups[0]}")
 
 
-def main(users: List[dict], ids: List[int], llm: CustomAPILLM):
+def main_loop(users: List[dict], ids: List[int], llm: CustomAPILLM):
+    """
+    Main loop of the script, that listens for new messages from users
+    """
     print("start")
     for event in longpoll.listen():
         if event.type == VkEventType.MESSAGE_NEW and event.to_me:
@@ -96,9 +104,17 @@ def main(users: List[dict], ids: List[int], llm: CustomAPILLM):
                                 send_message(user_id, "Произошла ошибка")
 
 
-if __name__ == "__main__":
-    url = "http://localhost:1234/v1/chat/completions"
-    llm_model_name = "vika-bot-game"
+def main():
+    """
+    Entry point of the script
+    """
+    load_dotenv()
+    url = os.getenv("API_URL")
+    llm_model_name = os.getenv("LLM_NAME")
+    if url is None or llm_model_name is None:
+        raise EnvironmentError(
+            "API_URL or LLM_MODEL_NAME is not set. Please set it before running the script."
+        )
     llm = CustomAPILLM(api_url=url, model_name=llm_model_name)
     if os.path.exists(os.path.join("bot_data", "users.pkl")):
         with open(os.path.join("bot_data", "users.pkl"), "rb") as file:
@@ -123,9 +139,13 @@ if __name__ == "__main__":
 
     while True:
         try:
-            main(users, ids, llm)
+            main_loop(users, ids, llm)
         except requests.exceptions.ReadTimeout:
             print("read-timeout")
             time.sleep(600)
         except Exception as ex:
             print(ex)
+
+
+if __name__ == "__main__":
+    main()

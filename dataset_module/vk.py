@@ -1,12 +1,16 @@
 import json
 
+from dotenv import load_dotenv
+import os
 import requests
 import vk_api
 from vk_api.longpoll import VkLongPoll
 from vk_api.utils import get_random_id
 
-from dataset_module.private_api import PRIVATE_API
-
+load_dotenv()
+PRIVATE_API = os.getenv("PRIVATE_API")
+if PRIVATE_API is None:
+    raise EnvironmentError("Environment variable 'PRIVATE_API' is not set.")
 vk_session = vk_api.VkApi(token=PRIVATE_API)
 vk = vk_session.get_api()
 longpoll = VkLongPoll(vk_session)

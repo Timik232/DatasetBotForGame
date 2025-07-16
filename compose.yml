@@ -7,5 +7,9 @@ services:
       - "500:500"
     environment:
       - PYTHONUNBUFFERED=1
+      - PRIVATE_API=${PRIVATE_API}
+      - LLM_URL=${LLM_URL}
+      - LLM_NAME=${LLM_NAME}
     volumes:
       - ./datasets:/datasets
+      - ./bot_data:/bot_data
