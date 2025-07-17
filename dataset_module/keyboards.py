@@ -9,7 +9,7 @@ from .vk import vk
 KeyboardLayout = List[List[Tuple[str, VkKeyboardColor]]]
 
 _KEYBOARD_LAYOUTS: Dict[str, KeyboardLayout] = {
-    "меню": [
+    "меню игры": [
         [
             ("Системный промпт", VkKeyboardColor.PRIMARY),
             ("Получить JSON-структуру", VkKeyboardColor.SECONDARY),
@@ -53,11 +53,16 @@ _KEYBOARD_LAYOUTS: Dict[str, KeyboardLayout] = {
     ],
     "выход": [[("выход", VkKeyboardColor.NEGATIVE)]],
     "0": [[("0", VkKeyboardColor.NEGATIVE)]],
+    "выбор проекта": [
+        [("Игра VIKA PROTOCOL", VkKeyboardColor.PRIMARY)],
+        [("Судья", VkKeyboardColor.PRIMARY)],
+        [("Робособака", VkKeyboardColor.PRIMARY)],
+    ],
 }
 
 
 def create_keyboard(
-    user_id: int, message: str, response_type: str = "меню", inline: bool = False
+    user_id: int, message: str, response_type: str = "меню игры", inline: bool = False
 ) -> None:
     """
     Sends a VK keyboard-based message to the specified user.
@@ -77,10 +82,17 @@ def create_keyboard(
         raise ValueError(f"Unknown response_type: {response_type}")
 
     keyboard = VkKeyboard(one_time=not inline, inline=inline)
-    for row in layout:
-        for label, color in row:
+
+    for i, row in enumerate(layout):
+        if len(row) > 5:
+            logging.error(f"Too many buttons in row: {row} for {response_type}")
+            continue
+
+        for _, (label, color) in enumerate(row):
             keyboard.add_button(label, color=color)
-        keyboard.add_line()
+
+        if i < len(layout) - 1:
+            keyboard.add_line()
 
     try:
         vk.messages.send(
@@ -90,5 +102,9 @@ def create_keyboard(
             keyboard=keyboard.get_keyboard(),
         )
     except Exception as e:
-        logging.error(e)
-        raise e
+        logging.error(f"Failed to send keyboard: {e}")
+        vk.messages.send(
+            user_id=user_id,
+            random_id=get_random_id(),
+            message=f"{message}\n\n[Ошибка клавиатуры]",
+        )

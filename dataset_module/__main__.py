@@ -25,7 +25,7 @@ def start_uvicorn():
     Start uvicorn server
     """
     uvicorn.run(
-        "dataset_module.fastapi_dataset:app", host="0.0.0.0", port=500, reload=False
+        "dataset_module.fastapi_dataset:app", host="0.0.0.0", port=5001, reload=False
     )
 
 
@@ -116,7 +116,7 @@ def main():
     llm_model_name = os.getenv("LLM_NAME")
     if url is None or llm_model_name is None:
         raise EnvironmentError(
-            "API_URL or LLM_MODEL_NAME is not set. Please set it before running the script."
+            "API_URL or LLM_NAME is not set. Please set it before running the script."
         )
     llm = CustomAPILLM(api_url=url, model_name=llm_model_name)
     if os.path.exists(os.path.join("bot_data", "users.pkl")):
